@@ -39,6 +39,7 @@ The Random Forest classifier is trained using the spectral bands of the Landsat 
 
 ### Area Calculation
  The application calculates the area covered by each land cover class, providing valuable insights into the spatial distribution of different types of land use within the GZM region. The calculated areas are displayed in the console for further analysis.
+
 ![image](https://github.com/user-attachments/assets/96145465-c02b-4e2d-b1c3-fb613dc7dc22)
 
 
