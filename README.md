@@ -63,8 +63,10 @@ In the given code, the correctness of image classification is checked by compari
 
 ## Presentation of classification on the basis of training fields
 
-![image](https://github.com/user-attachments/assets/4adfa5f7-dbd7-454c-ae90-0eb8c8cce76a)
-![image](https://github.com/user-attachments/assets/74763411-ee56-458e-91b6-65fe3153124e)
+
+| Training Fields | Result |
+|-----------|-----------|
+| ![image](https://github.com/user-attachments/assets/4adfa5f7-dbd7-454c-ae90-0eb8c8cce76a) | ![image](https://github.com/user-attachments/assets/74763411-ee56-458e-91b6-65fe3153124e) |
 
 
 
