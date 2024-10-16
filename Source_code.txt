@@ -207,4 +207,32 @@ for (var i = 0; i < classes.length; i++) {
 }
 
 // Add NDVI and NDWI layers to the map (NDVI for all classes)
+
+// Validation through test fields
+var referencePoints = ee.FeatureCollection([
+  ee.Feature(AgriculturalAreas_sample, { class: 0 }),
+  ee.Feature(AnthropogenicAreas_sample, { class: 1 }),
+  ee.Feature(Forests_SE_sample, { class: 2 }),
+  ee.Feature(Water_Areas_sample, { class: 3 })
+]);
+
+// Prepare reference data
+var referenceData = referencePoints;
+
+// Perform classification on the whole image
+var classifiedImage = classified;
+
+// Compare classification results with reference data
+var accuracy = classifiedImage.sampleRegions({
+  collection: referenceData,
+  properties: ['class'],
+  scale: 30
+}).errorMatrix('class', 'classification');
+
+// Calculate the percentage of correctness
+var accuracyPercentage = accuracy.accuracy().multiply(100);
+
+// Display result
+print('Percentage of correctness of calibration:', accuracyPercentage);
+
 // This concludes the script.
