@@ -1,0 +1,210 @@
+// Tymoteusz Maj
+// Team 3
+
+
+// Setting up the work area
+
+// Center the map on the GZM region (Górnośląsko-Zagłębiowska Metropolis)
+Map.setCenter(18.8, 50.3, 10);
+
+// Define the geographical area of interest using a rectangle that covers the GZM
+var GZMRectangle = ee.Geometry.Rectangle([18.25, 49.95, 19.65, 50.55]);
+
+// Load the GZM boundaries, previously extracted using QGIS from the Polish county boundaries
+var GZMBoundaries = ee.FeatureCollection("users/tymoteuszmaj/GZM");
+
+// Define the year of analysis, here 2023, and set the period of interest (May to October)
+var analysisYear = 2023;
+var startDate = ee.Date.fromYMD(analysisYear, 5, 1);
+var endDate = ee.Date.fromYMD(analysisYear, 10, 31);
+
+// Download the Landsat 9 TOA (Top of Atmosphere) data for the GZM area, filtered by date and cloud cover
+var landsatCollection = ee.ImageCollection("LANDSAT/LC09/C02/T1_TOA")
+  .filterBounds(GZMRectangle)
+  .filterDate(startDate, endDate)
+  .sort("CLOUD_COVER", true) // Sort images by least cloud cover
+  .limit(20); // Limit to 20 images with the least cloud cover
+
+// Compute the median image from the filtered collection
+var medianImage = landsatCollection.median();
+
+// Clip the Landsat image to the GZM boundaries
+var landsatImage = medianImage.clip(GZMBoundaries);
+
+// Select the RGB bands for visualization (Red: B4, Green: B3, Blue: B2)
+var rgbImage = landsatImage.select(['B4', 'B3', 'B2']);
+
+// Cloud masking: create a mask for likely clouded pixels and apply it to the image
+var cloudMask = landsatImage.eq(61440)  // Detect cloud pixels
+  .reduce(ee.Reducer.anyNonZero());
+var mask = cloudMask.not();  // Invert the mask to exclude clouds
+var rgbMasked = rgbImage.updateMask(mask);  // Apply the mask to the RGB image
+
+// Brightness and contrast adjustments to improve the visual appearance
+var brightnessFactor = 1;
+var contrastFactor = 1;
+var rgbAdjusted = rgbMasked.multiply(brightnessFactor).multiply(contrastFactor);
+
+// Display the adjusted RGB image on the map
+Map.addLayer(rgbAdjusted, { min: 0, max: 0.3 }, 'Adjusted RGB Image');
+
+// Image sharpening using the HSV (Hue, Saturation, Value) model
+var hsv = rgbAdjusted.select(['B4', 'B3', 'B2']).rgbToHsv();
+var sharpened = ee.Image.cat([hsv.select('hue'), hsv.select('saturation'), landsatImage.select('B8')]) // Replace value with NIR band
+  .hsvToRgb();
+Map.addLayer(sharpened, { min: 0, max: 0.25, gamma: [1.3, 1.3, 1.3] }, 'Sharpened Image');
+
+// Add missing spectral bands (other than RGB) from the Landsat image to the sharpened image
+var allBands = landsatImage.bandNames();  // Get all band names
+var presentBands = sharpened.bandNames();  // Get the bands already present in the sharpened image
+var missingBands = allBands.removeAll(presentBands);  // Identify the missing bands
+var missingBandsImage = landsatImage.select(missingBands);  // Extract the missing bands
+
+// Add the missing spectral bands back to the sharpened image
+sharpened = sharpened.addBands(missingBandsImage);
+
+// Select the spectral bands that are of interest for classification and index calculations
+var bands = ['B2', 'B3', 'B4', 'B5', 'B6', 'B7'];
+
+// Training data: predefined polygons representing different land cover classes
+// These polygons are manually labeled as "agriculture", "urban", "forest", and "water"
+var trainingPoints = ee.FeatureCollection([
+  ee.Feature(AgriculturalAreas, { class: 0 }), // Agriculture
+  ee.Feature(AnthropogenicAreas, { class: 1 }), // Urban
+  ee.Feature(Forests_SE, { class: 2 }), // Forest
+  ee.Feature(Water_Areas, { class: 3 }) // Water
+]);
+
+// Sample pixel values from the Landsat image using the training data
+var training = landsatImage.select(bands).sampleRegions({
+  collection: trainingPoints,
+  properties: ['class'], // The target class for training
+  scale: 30  // Resolution of the Landsat imagery
+});
+
+// Machine Learning: Train a Random Forest classifier using the sample data
+// Random Forest is a supervised learning algorithm used for classification
+var classifier = ee.Classifier.smileRandomForest(10).train({
+  features: training,  // Training data
+  classProperty: 'class',  // The class label (target)
+  inputProperties: bands  // The input features (spectral bands)
+});
+
+// Classify the entire Landsat image using the trained classifier
+var classified = landsatImage.select(bands).classify(classifier);
+
+// Display the classification results on the map
+Map.addLayer(
+  classified,
+  { min: 0, max: 3, palette: ['yellow', 'red', 'green', 'navy'] },  // Colors for each class
+  'Classification'
+);
+
+// Calculate areas of individual classes
+var areas = classified.reduceRegion({
+  reducer: ee.Reducer.frequencyHistogram(),
+  geometry: GZMBoundaries,
+  scale: 30,
+  maxPixels: 1e9
+});
+
+// Display areas of individual classes in the console
+print('Class Areas:');
+print(areas);
+
+// Function to calculate area in square meters
+var calculateArea = function(feature, classGeometry) {
+  var pixelArea = ee.Image.pixelArea();
+  var geometry = feature.geometry();
+  var areaImage = pixelArea.updateMask(feature);
+  var area = areaImage.reduceRegion({
+    reducer: ee.Reducer.sum(),
+    geometry: classGeometry,  // Use the class-specific geometry
+    scale: 30,
+    maxPixels: 1e9
+  });
+  return ee.Feature(geometry, area);
+};
+
+// Indices Calculation: NDVI and NDWI
+
+// Calculate NDVI (Normalized Difference Vegetation Index)
+var red = sharpened.select('B4');  // Red band
+var nir = sharpened.select('B5');  // Near-infrared (NIR) band
+var ndvi = nir.subtract(red).divide(nir.add(red)).rename('NDVI');  // NDVI formula: (NIR - Red) / (NIR + Red)
+
+// Display NDVI on the map
+Map.addLayer(ndvi, { min: -1, max: 1, palette: ['blue', 'lightblue', 'green', 'yellow', 'red'] }, 'NDVI');
+
+// Calculate the mean NDVI over the entire GZM area
+var meanNdvi = ndvi.reduceRegion({
+  reducer: ee.Reducer.mean(),
+  geometry: GZMBoundaries,  // Limit to GZM boundaries
+  scale: 30,
+  maxPixels: 1e9
+});
+
+// Print the average NDVI for the entire area
+print('Average NDVI over the entire area:', meanNdvi.get('NDVI'));
+
+// Calculate NDWI (Normalized Difference Water Index)
+var green = sharpened.select('B3');  // Green band
+var ndwi = nir.subtract(green).divide(nir.add(green)).rename('NDWI');  // NDWI formula: (NIR - Green) / (NIR + Green)
+
+// Display NDWI on the map
+Map.addLayer(ndwi, { min: -1, max: 1, palette: ['blue', 'lightblue', 'green', 'yellow', 'red'] }, 'NDWI');
+
+// Calculate the mean NDWI over the entire GZM area
+var meanNdwi = ndwi.reduceRegion({
+  reducer: ee.Reducer.mean(),
+  geometry: GZMBoundaries,  // Limit to GZM boundaries
+  scale: 30,
+  maxPixels: 1e9
+});
+
+// Print the average NDWI for the entire area
+print('Average NDWI over the entire area:', meanNdwi.get('NDWI'));
+
+// Class-Specific Analysis
+// Calculate indices for each class (Agricultural, Urban, Forest, Water)
+var classes = [
+  { name: 'Agricultural Areas', featureCollection: AgriculturalAreas, classNumber: 0 },
+  { name: 'Urban Areas', featureCollection: AnthropogenicAreas, classNumber: 1 },
+  { name: 'Forests', featureCollection: Forests_SE, classNumber: 2 },
+  { name: 'Water Areas', featureCollection: Water_Areas, classNumber: 3 }
+];
+
+// Calculate the area covered by each class
+for (var i = 0; i < classes.length; i++) {
+  var currentClass = classes[i];
+  print(currentClass.name);
+    var className = classes[i].name;
+  var classFeatureCollection = classes[i].featureCollection;
+  var classNumber = classes[i].classNumber;
+  var classMask = classified.eq(classNumber);
+
+  // Calculate the area covered by the class
+  var classArea = calculateArea(classMask, classFeatureCollection);
+  print('Area of', className, ':', classArea.get('area'), 'm^2');
+
+  // Calculate NDVI for the class
+  var classNdvi = ndvi.reduceRegion({
+    reducer: ee.Reducer.mean(),
+    geometry: currentClass.featureCollection,
+    scale: 30,
+    maxPixels: 1e9
+  });
+  print('Mean NDVI:', classNdvi.get('NDVI'));
+
+  // Calculate NDWI for the class
+  var classNdwi = ndwi.reduceRegion({
+    reducer: ee.Reducer.mean(),
+    geometry: currentClass.featureCollection,
+    scale: 30,
+    maxPixels: 1e9
+  });
+  print('Mean NDWI:', classNdwi.get('NDWI'));
+}
+
+// Add NDVI and NDWI layers to the map (NDVI for all classes)
+// This concludes the script.
