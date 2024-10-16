@@ -35,14 +35,20 @@ Machine Learning Classification: The Random Forest classifier is trained using t
 
 
 Area Calculation: The application calculates the area covered by each land cover class, providing valuable insights into the spatial distribution of different types of land use within the GZM region. The calculated areas are displayed in the console for further analysis.
+![image](https://github.com/user-attachments/assets/96145465-c02b-4e2d-b1c3-fb613dc7dc22)
+
 
 Index Calculations: The application computes two significant indices: the Normalized Difference Vegetation Index (NDVI) and the Normalized Difference Water Index (NDWI). These indices are essential for assessing vegetation health and water content, respectively. Both indices are calculated over the entire GZM area and for each specific class, facilitating a detailed understanding of the environmental conditions.
 
 NDVI
 ![image](https://github.com/user-attachments/assets/ab056295-6942-496a-901c-6cf896588b6e)
+![image](https://github.com/user-attachments/assets/de3b4370-5ef0-448b-89b1-49e4dd8956ba)
+
 
 NDWI
 ![image](https://github.com/user-attachments/assets/a61ae5ad-70ff-421f-b1fb-e530e01863cf)
+![image](https://github.com/user-attachments/assets/3bfd0217-2a46-43c9-82d5-4ce61e7f7761)
+
 
 
 Conclusion
