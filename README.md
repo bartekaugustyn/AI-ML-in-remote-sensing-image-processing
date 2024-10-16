@@ -55,6 +55,10 @@ The Random Forest classifier is trained using the spectral bands of the Landsat 
 ![image](https://github.com/user-attachments/assets/a61ae5ad-70ff-421f-b1fb-e530e01863cf)
 ![image](https://github.com/user-attachments/assets/3bfd0217-2a46-43c9-82d5-4ce61e7f7761)
 
+### Verification of correct classification
+In the given code, the correctness of image classification is checked by comparing the classification results with reference points. An error matrix (errorMatrix) is created, from which the classification accuracy is calculated. The result, expressed as a percentage, allows an assessment of how well the algorithm has classified the image against the given reference classes.
+
+![image](https://github.com/user-attachments/assets/7ce05489-0610-4de0-973c-f2dd2b8d7e46)
 
 
 ## Conclusion
