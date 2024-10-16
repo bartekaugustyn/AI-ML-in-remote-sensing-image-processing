@@ -61,5 +61,12 @@ In the given code, the correctness of image classification is checked by compari
 ![image](https://github.com/user-attachments/assets/7ce05489-0610-4de0-973c-f2dd2b8d7e46)
 
 
+## Presentation of classification on the basis of training fields
+
+![image](https://github.com/user-attachments/assets/4adfa5f7-dbd7-454c-ae90-0eb8c8cce76a)
+![image](https://github.com/user-attachments/assets/74763411-ee56-458e-91b6-65fe3153124e)
+
+
+
 ## Conclusion
 The GZM Land Cover Classification Application provides a robust framework for analyzing land cover changes within the Górnośląsko-Zagłębiowska Metropolis. By integrating advanced machine learning techniques with remote sensing data, the application not only enhances our understanding of land use dynamics but also serves as a vital tool for urban planning and environmental management.
