@@ -11,6 +11,7 @@ Import the Górnośląsko-Zagłębiowska Metropolis (GZM) boundaries into the Go
 
 - **Step 2**: Import and Convert Reference Data
 Import your reference data into GEE. If your reference data is in .txt format, copy the files and convert them using the provided conversion function. This step is crucial for preparing training data for the machine learning model.
+
 ![image](https://github.com/user-attachments/assets/83e7883c-6083-4ce9-b6df-ed1d1e7ebea9)
 
 - **Step 3**: Import and Run the Code
